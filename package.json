@@ -3,7 +3,7 @@
   "description": "A template for building a React application with Vite, Hono, and Cloudflare Workers",
   "version": "0.0.0",
   "cloudflare": {
-    "label": "Vite React Template",
+    "label": "Vite React Hono",
     "products": [
       "Workers"
     ],

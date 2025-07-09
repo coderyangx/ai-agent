@@ -79,6 +79,7 @@ export function ChatInput({
         <Button
           type='submit'
           disabled={isLoading || !value.trim()}
+          onClick={onSubmit}
           className='min-w-[80px] gap-2 rounded-xl h-10'
         >
           <SendHorizontal className='h-4 w-4' />
