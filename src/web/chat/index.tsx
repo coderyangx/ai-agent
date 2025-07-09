@@ -272,7 +272,7 @@ export default function ChatContainer() {
         <div className='flex items-center space-x-2'>
           <Bot className='h-5 w-5 text-primary' />
           <SplitText
-            text='AI 助手'
+            text='Agent'
             className='font-semibold text-center'
             delay={100}
             duration={0.6}
