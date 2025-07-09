@@ -26,13 +26,12 @@ app.use(
     origin: '*', // 允许所有来源访问
   })
 );
-app.get('/api/', (c) => c.json({ name: 'Hello, I am a cloudflare worker hono server' }));
 
 // API 路由
 app.get('/api', (c) => {
   return c.json({
     status: 'ok',
-    message: '测试成功',
+    message: 'ai-agent 测试成功',
     timestamp: new Date().toISOString(),
   });
 });
