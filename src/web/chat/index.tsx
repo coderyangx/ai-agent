@@ -34,7 +34,7 @@ interface Message {
 const cookie = getCookie();
 
 export default function ChatContainer() {
-  const streamMode = Boolean(localStorage.getItem('isStreamMode')) || false;
+  const streamMode = JSON.parse(localStorage.getItem('isStreamMode')) || false;
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');

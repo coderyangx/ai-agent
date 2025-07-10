@@ -13,12 +13,12 @@ import { createOpenAI } from '@ai-sdk/openai';
 
 // console.log('process.env.FRIDAY_API_KEY: ', process?.env?.FRIDAY_API_KEY);
 
-const openai = createOpenAI({
+const app = new Hono<{ Bindings: Env }>();
+
+const getModel = createOpenAI({
   apiKey: '21902918114338451458', //  process?.env?.FRIDAY_API_KEY ||
   baseURL: 'https://aigc.sankuai.com/v1/openai/native/',
 });
-
-const app = new Hono<{ Bindings: Env }>();
 
 // 配置CORS，允许所有来源访问
 app.use(
@@ -29,10 +29,12 @@ app.use(
 
 // API 路由
 app.get('/api', (c) => {
+  // console.log('c.env: ', c.env.FRIDAY_API_KEY, c.env);
   return c.json({
     code: 200,
     status: 'ok',
     message: 'ai-agent 测试成功',
+    env: c.env.FRIDAY_API_KEY || '无法获取 env',
     timestamp: new Date().toISOString(),
   });
 });
@@ -59,7 +61,7 @@ app.post('/api/agent/stream', async (c) => {
   const { messages } = await c.req.json();
   console.log('流式输出: ', messages);
   const result = streamText({
-    model: openai('gpt-4o-mini'),
+    model: getModel('gpt-4o-mini'),
     messages: messages,
     onChunk: (chunk) => {
       // @ts-ignore
@@ -77,9 +79,11 @@ app.post('/api/agent/gemini-stream', async (c) => {
   const { messages } = await c.req.json();
   console.log('流式输出: ', messages);
   const result = streamText({
-    model: openai('gpt-4o-mini'),
+    model: getModel('gpt-4o-mini'),
     messages: messages,
-    onChunk: (chunk) => {},
+    onChunk: (chunk) => {
+      console.log('hono onChunk: ', chunk.chunk);
+    },
   });
   // toDataStreamResponse can be used with the `useChat` and `useCompletion` hooks.
   // { sendReasoning: true, }
@@ -91,7 +95,7 @@ app.post('/api/agent/chat', async (c) => {
   const { messages } = await c.req.json();
   console.log('普通输出: ', messages);
   const result = await generateText({
-    model: openai('gpt-4o-mini'),
+    model: getModel('gpt-4o-mini'),
     messages: messages,
   });
   // console.log('普通输出: ', result);
@@ -104,7 +108,7 @@ app.post('/api/agent/recommend', async (c) => {
   const { messages } = await c.req.json();
   console.log('推荐请求: ', messages);
   const result = await generateObject({
-    model: openai('gpt-4o-mini'),
+    model: getModel('gpt-4o-mini'),
     system: `
     你是一个电影推荐系统，请严格按照以下规则处理用户请求：
     ## 规则
