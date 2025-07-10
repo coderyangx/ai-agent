@@ -6,6 +6,7 @@ import viteLogo from '/vite.svg';
 import cloudflareLogo from './assets/Cloudflare_Logo.svg';
 import honoLogo from './assets/hono.svg';
 import ChatContainer from './chat';
+import ChatGemini from './chat-gemini';
 import './App.css';
 
 function App() {
@@ -14,6 +15,7 @@ function App() {
 
   return (
     <>
+      {/* <ChatGemini /> */}
       <ChatContainer />
       {/* <div>
         <a href="https://vite.dev" target="_blank">

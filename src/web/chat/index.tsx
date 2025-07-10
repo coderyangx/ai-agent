@@ -10,6 +10,7 @@ import { Button } from '../components/button';
 
 import { useTheme } from '../utils/theme';
 import { getCookie } from '../config';
+import { set } from 'zod';
 // import { ContentCard } from '@/components/shadcn/ContentCard';
 
 interface Message {
@@ -33,11 +34,13 @@ interface Message {
 const cookie = getCookie();
 
 export default function ChatContainer() {
+  const streamMode = Boolean(localStorage.getItem('isStreamMode')) || false;
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const { theme, toggleTheme } = useTheme();
   const [isLoading, setIsLoading] = useState(false);
-  const [isStreamMode, setIsStreamMode] = useState(false);
+  const [isStreamMode, setIsStreamMode] = useState(streamMode);
   const [streamContent, setStreamContent] = useState('');
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -106,8 +109,20 @@ export default function ChatContainer() {
   // 处理普通输出
   const handleNormalMode = async (content: string) => {
     try {
+      const conversation = [
+        ...messages.map((msg) => ({
+          role: msg.role,
+          content: msg.content,
+        })),
+        {
+          role: 'user' as const,
+          content: content,
+        },
+      ];
+      console.log('调用 chat 接口:', conversation);
+
       // 调用AI /api/agent/chat
-      const response = await fetch('/api/agent/test', {
+      const response = await fetch('/api/agent/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -115,15 +130,11 @@ export default function ChatContainer() {
           'X-Timestamp': new Date().getTime().toString(),
           Cookie: cookie,
         },
-        body: JSON.stringify({ message: content }),
+        body: JSON.stringify({ messages: conversation }),
       });
 
-      if (!response.ok) {
-        throw new Error('网络请求失败');
-      }
-
       const data = await response.json();
-      const aiResponse = data.message || data.reply || data.response || '';
+      const aiResponse = data.message || data.content || data.response || '';
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         content: aiResponse,
@@ -147,11 +158,128 @@ export default function ChatContainer() {
   };
 
   // 处理流式输出
+  // const handleStreamMode = async (content: string) => {
+  //   try {
+  //     // 创建一个空的助手消息占位
+  //     const placeholderId = (Date.now() + 1).toString();
+  //     const timestamp = new Date().toLocaleTimeString();
+
+  //     const conversation = [
+  //       ...messages.map((msg) => ({
+  //         role: msg.role,
+  //         content: msg.content,
+  //       })),
+  //       {
+  //         role: 'user' as const,
+  //         content: content,
+  //       },
+  //     ];
+  //     // 添加一个空的助手消息，用于显示流式内容
+  //     setMessages((prev) => [
+  //       ...prev,
+  //       {
+  //         id: placeholderId,
+  //         content: '',
+  //         role: 'assistant',
+  //         timestamp,
+  //       },
+  //     ]);
+
+  //     // 调用流式API  fetch 可以直接返回流式数据
+  //     const response = await fetch('/api/agent/stream', {
+  //       method: 'POST',
+  //       body: JSON.stringify({ messages: conversation }),
+  //     });
+
+  //     // 基于 fetch 响应体的 getReader 方法，可以读取流式数据
+  //     const reader = response.body?.getReader();
+  //     const decoder = new TextDecoder();
+  //     let accumulatedContent = '';
+
+  //     while (true) {
+  //       const { done, value } = await reader.read();
+  //       // console.log('流式数据:', value);
+  //       if (done) break;
+  //       const chunk = decoder.decode(value, { stream: true }); // 解码
+  //       console.log('接收到数据块:', chunk);
+
+  //       const lines = chunk.split('\n\n'); // 处理SSE格式
+
+  //       for (const line of lines) {
+  //         if (line.startsWith('data: ')) {
+  //           const data = line.substring(6); // 移除 'data: ' 前缀
+  //           if (data === '[DONE]') {
+  //             break;
+  //           }
+  //           try {
+  //             const parsed = JSON.parse(data);
+  //             console.log('解析后的数据:', parsed);
+  //             if (parsed.content) {
+  //               accumulatedContent += parsed.content;
+  //               setStreamContent(accumulatedContent); // 更新消息内容
+  //               // 更新现有消息
+  //               setMessages((prev) =>
+  //                 prev.map((msg) =>
+  //                   msg.id === placeholderId ? { ...msg, content: accumulatedContent } : msg
+  //                 )
+  //               );
+  //             }
+  //           } catch (e) {
+  //             console.error('解析SSE数据失败', e);
+  //           }
+  //         }
+  //       }
+  //     }
+  //     // response.blob().then((blob) => {
+  //     //   const reader = new FileReader();
+  //     //   reader.onload = (e) => {
+  //     //     const content = e.target?.result as string;
+  //     //     console.log("流式数据:", content);
+  //     //     // 将流式数据添加到 messages 中
+  //     //     setMessages((prev) => [
+  //     //       ...prev,
+  //     //       {
+  //     //         id: (Date.now() + 1).toString(),
+  //     //         content: content,
+  //     //         role: "assistant",
+  //     //         timestamp: new Date().toLocaleTimeString(),
+  //     //       },
+  //     //     ]);
+  //     //   };
+  //     //   reader.readAsText(blob);
+  //     // });
+  //   } catch (error) {
+  //     const errorMessage: Message = {
+  //       id: (Date.now() + 1).toString(),
+  //       content: '抱歉，流式输出发生错误。请稍后再试。',
+  //       role: 'system',
+  //       timestamp: new Date().toLocaleTimeString(),
+  //     };
+  //     setMessages((prev) => [...prev, errorMessage]);
+  //   } finally {
+  //     setIsLoading(false);
+  //     setStreamContent('');
+  //   }
+  // };
+
+  // 修改 handleStreamMode 中的处理逻辑
+  // 处理流式输出
   const handleStreamMode = async (content: string) => {
     try {
       // 创建一个空的助手消息占位
       const placeholderId = (Date.now() + 1).toString();
       const timestamp = new Date().toLocaleTimeString();
+
+      const conversation = [
+        ...messages.map((msg) => ({
+          role: msg.role,
+          content: msg.content,
+        })),
+        {
+          role: 'user' as const,
+          content: content,
+        },
+      ];
 
       // 添加一个空的助手消息，用于显示流式内容
       setMessages((prev) => [
@@ -163,9 +291,9 @@ export default function ChatContainer() {
           timestamp,
         },
       ]);
+      setIsLoading(true);
 
       // 调用流式API
-      // fetch 可以直接返回流式数据
       const response = await fetch('/api/agent/stream', {
         method: 'POST',
         headers: {
@@ -174,74 +302,46 @@ export default function ChatContainer() {
           'X-Timestamp': new Date().getTime().toString(),
           Cookie: cookie,
         },
-        body: JSON.stringify({ message: content }),
+        body: JSON.stringify({ messages: conversation }),
       });
 
-      if (!response.ok) {
-        throw new Error('网络请求失败');
-      }
-
-      // 基于 fetch 响应体的 getReader 方法，可以读取流式数据
       const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('Response body is null');
+      }
+      setIsLoading(false);
+
       const decoder = new TextDecoder();
       let accumulatedContent = '';
-
-      if (!reader) {
-        throw new Error('无法读取响应流');
-      }
-
-      while (true) {
-        const { done, value } = await reader.read();
-        // console.log('流式数据:', value);
-        if (done) break;
-        // 解码
-        const chunk = decoder.decode(value, { stream: true });
-        // 处理SSE格式
-        const lines = chunk.split('\n\n');
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.substring(6);
-            if (data === '[DONE]') {
-              break;
-            }
-            try {
-              const parsed = JSON.parse(data);
-              if (parsed.content) {
-                accumulatedContent += parsed.content;
-                // 更新消息内容
-                setStreamContent(accumulatedContent);
-                // 更新现有消息
-                setMessages((prev) =>
-                  prev.map((msg) =>
-                    msg.id === placeholderId ? { ...msg, content: accumulatedContent } : msg
-                  )
-                );
-              }
-            } catch (e) {
-              console.error('解析SSE数据失败', e);
-            }
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) {
+            break;
+          }
+          const chunk = decoder.decode(value, { stream: true });
+          console.log('接收到数据块:', chunk);
+          // 处理可能包含多个 JSON 对象的数据块
+          const lines = chunk.split('\n');
+          console.log('lines', lines);
+          for (const line of lines) {
+            // 如果不是 JSON，则当作文本内容处理
+            console.log('处理文本内容:', line);
+            // 累积文本内容
+            accumulatedContent += line;
+            setStreamContent(accumulatedContent);
+            // 实时更新消息内容
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === placeholderId ? { ...msg, content: accumulatedContent } : msg
+              )
+            );
           }
         }
+      } finally {
+        reader.releaseLock();
       }
-      // response.blob().then((blob) => {
-      //   const reader = new FileReader();
-      //   reader.onload = (e) => {
-      //     const content = e.target?.result as string;
-      //     console.log("流式数据:", content);
-      //     // 将流式数据添加到 messages 中
-      //     setMessages((prev) => [
-      //       ...prev,
-      //       {
-      //         id: (Date.now() + 1).toString(),
-      //         content: content,
-      //         role: "assistant",
-      //         timestamp: new Date().toLocaleTimeString(),
-      //       },
-      //     ]);
-      //   };
-      //   reader.readAsText(blob);
-      // });
+      console.log('最终累积内容:', accumulatedContent);
     } catch (error) {
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -254,6 +354,19 @@ export default function ChatContainer() {
       setIsLoading(false);
       setStreamContent('');
     }
+  };
+
+  const handleBot = () => {
+    fetch('/api')
+      .then((res) => res.json())
+      .then((data) => {
+        console.log('测试接口: ', data);
+      });
+  };
+
+  const handleSwitchMode = () => {
+    setIsStreamMode(!isStreamMode);
+    localStorage.setItem('isStreamMode', JSON.stringify(!isStreamMode));
   };
 
   const copyMessage = async (content: string) => {
@@ -270,7 +383,7 @@ export default function ChatContainer() {
     <div className='flex flex-col h-[calc(100vh-2rem)] max-w-4xl mx-auto bg-card rounded-lg shadow-lg overflow-hidden border'>
       <div className='flex items-center justify-between px-6 py-4 border-b bg-card'>
         <div className='flex items-center space-x-2'>
-          <Bot className='h-5 w-5 text-primary' />
+          <Bot className='h-5 w-5 text-primary' onClick={handleBot} />
           <SplitText
             text='Agent'
             className='font-semibold text-center'
@@ -288,18 +401,12 @@ export default function ChatContainer() {
           <div className='h-2 w-2 bg-green-500 rounded-full animate-pulse' />
           {/* 状态指示 */}
           <div className='text-sm text-gray-500'>{isLoading && '正在输入中...'}</div>
-          {/* <h2 className='text-lg font-semibold flex'>AI 助手</h2> */}
-          {/* <Button variant='destructive'>测试shadcn</Button>
-          <Button variant='outline'>测试shadcn</Button>
-          <Button variant='secondary'>测试shadcn</Button>
-          <Button variant='ghost'>测试shadcn</Button>
-          <Button variant='link'>测试shadcn</Button> */}
         </div>
 
         <div className='flex items-center space-x-4'>
           {/* 流式输出模式开关 */}
           <div className='flex items-center space-x-2'>
-            <Switch id='stream-mode' checked={isStreamMode} onCheckedChange={setIsStreamMode} />
+            <Switch id='stream-mode' checked={isStreamMode} onCheckedChange={handleSwitchMode} />
             <Label htmlFor='stream-mode' className='flex items-center space-x-1'>
               <Zap className='h-4 w-4' />
               <span>流式输出</span>

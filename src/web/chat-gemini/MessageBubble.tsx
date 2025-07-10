@@ -43,7 +43,7 @@ export default function MessageBubble({
               : 'bg-gray-100 text-gray-900 rounded-bl-md hover:bg-gray-150'
           )}
         >
-          <div className='whitespace-pre-wrap break-words'>{message.content}</div>
+          <div className='text-left whitespace-pre-wrap break-words'>{message.content}</div>
         </div>
 
         {/* 时间戳和操作按钮 */}

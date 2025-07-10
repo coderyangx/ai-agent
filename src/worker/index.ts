@@ -30,9 +30,28 @@ app.use(
 // API 路由
 app.get('/api', (c) => {
   return c.json({
+    code: 200,
     status: 'ok',
     message: 'ai-agent 测试成功',
     timestamp: new Date().toISOString(),
+  });
+});
+
+// 测试接口
+app.post('/api/agent/test', async (c) => {
+  const body = await c.req.json(); // 前端使用 useChat 时，接收 messages
+  let userContent: string;
+  if (body.messages && Array.isArray(body.messages)) {
+    userContent = body.messages[body.messages.length - 1].content;
+  } else if (body.message) {
+    userContent = body.message;
+  } else {
+    return c.json({ error: 'Invalid request format' }, 400);
+  }
+
+  return c.json({
+    role: 'assistant',
+    content: `I am a Hono AI agent. You said: '${userContent}'`,
   });
 });
 
@@ -48,15 +67,29 @@ app.post('/api/agent/stream', async (c) => {
     },
   });
   // toDataStreamResponse can be used with the `useChat` and `useCompletion` hooks.
-  return result.toDataStreamResponse({
-    sendReasoning: true,
-  }); // 标准 sse 响应
-  // return result.toTextStreamResponse(); // 纯文本流响应
+  // return result.toDataStreamResponse({
+  //   sendReasoning: true,
+  // }); // 标准 sse 响应
+  return result.toTextStreamResponse(); // 纯文本流响应
+  // return honoStream(c, (s) => s.pipe(result.toDataStream()));
+});
+app.post('/api/agent/gemini-stream', async (c) => {
+  const { messages } = await c.req.json();
+  console.log('流式输出: ', messages);
+  const result = streamText({
+    model: openai('gpt-4o-mini'),
+    messages: messages,
+    onChunk: (chunk) => {},
+  });
+  // toDataStreamResponse can be used with the `useChat` and `useCompletion` hooks.
+  // { sendReasoning: true, }
+  return result.toDataStreamResponse(); // 标准 sse 响应
   // return honoStream(c, (s) => s.pipe(result.toDataStream()));
 });
 
 app.post('/api/agent/chat', async (c) => {
   const { messages } = await c.req.json();
+  console.log('普通输出: ', messages);
   const result = await generateText({
     model: openai('gpt-4o-mini'),
     messages: messages,
@@ -104,16 +137,6 @@ app.post('/api/agent/recommend', async (c) => {
     isValidRequest: result.object.isValidRequest,
     message: result.object.message,
     movies: result.object.movies || [],
-  });
-});
-
-app.post('/api/agent/test', async (c) => {
-  const { messages } = await c.req.json(); // 前端使用 useChat 时，接收 messages
-  const userContent = messages[messages.length - 1].content;
-
-  return c.json({
-    role: 'assistant',
-    content: `I am a Hono AI agent. You said: '${userContent}'`,
   });
 });
 

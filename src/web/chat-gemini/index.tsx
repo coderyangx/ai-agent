@@ -14,7 +14,7 @@ import MessageBubble from './MessageBubble';
 
 export default function ChatGemini() {
   const { messages, input, handleInputChange, handleSubmit, isLoading, error } = useChat({
-    api: 'http://localhost:8080/api/agent/stream',
+    api: '/api/agent/gemini-stream',
     streamProtocol: 'data',
   });
 
@@ -35,7 +35,7 @@ export default function ChatGemini() {
         <div className='flex items-center gap-3'>
           <div className='flex items-center gap-2'>
             <Bot className='h-6 w-6 text-blue-500' />
-            <h1 className='text-lg font-semibold text-gray-900'>AI 助手</h1>
+            <div className='text-m font-semibold text-gray-900'>AI 助手</div>
           </div>
           <div className='h-2 w-2 bg-green-500 rounded-full animate-pulse' />
         </div>
