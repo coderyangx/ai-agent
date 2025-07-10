@@ -34,7 +34,8 @@ app.get('/api', (c) => {
     code: 200,
     status: 'ok',
     message: 'ai-agent 测试成功',
-    env: c.env.FRIDAY_API_KEY || '无法获取 env',
+    // @ts-ignore
+    env: c.env?.FRIDAY_API_KEY || '无法获取 env',
     timestamp: new Date().toISOString(),
   });
 });
