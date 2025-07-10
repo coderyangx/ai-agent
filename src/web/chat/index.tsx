@@ -20,10 +20,6 @@ interface Message {
   timestamp: string;
 }
 
-// const cookie = getCookie();
-
-// import { ContentCard } from '@/components/shadcn/ContentCard';
-
 interface Message {
   id: string;
   content: string;
@@ -125,9 +121,9 @@ export default function ChatContainer() {
       const response = await fetch('/api/agent/chat', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           'X-Time': new Date().toLocaleString(),
           'X-Timestamp': new Date().getTime().toString(),
+          'Custom-Name': 'yang',
           Cookie: cookie,
         },
         body: JSON.stringify({ messages: conversation }),
@@ -297,9 +293,9 @@ export default function ChatContainer() {
       const response = await fetch('/api/agent/stream', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           'X-Time': new Date().toLocaleString(),
           'X-Timestamp': new Date().getTime().toString(),
+          'Custom-Name': 'yang',
           Cookie: cookie,
         },
         body: JSON.stringify({ messages: conversation }),
@@ -365,6 +361,9 @@ export default function ChatContainer() {
 
     fetch('/api/agent/recommend', {
       method: 'POST',
+      headers: {
+        Cookie: cookie,
+      },
       body: JSON.stringify({
         messages: [
           {
@@ -396,7 +395,7 @@ export default function ChatContainer() {
   };
 
   return (
-    <div className='flex flex-col h-[calc(100vh-2rem)] max-w-4xl mx-auto bg-card rounded-lg shadow-lg overflow-hidden border'>
+    <div className='flex flex-col h-full max-w-4xl mx-auto bg-card rounded-lg shadow-lg overflow-hidden border'>
       <div className='flex items-center justify-between px-6 py-4 border-b bg-card'>
         <div className='flex items-center space-x-2'>
           <Bot className='h-5 w-5 text-primary' onClick={handleBot} />
