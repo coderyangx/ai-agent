@@ -362,6 +362,22 @@ export default function ChatContainer() {
       .then((data) => {
         console.log('测试接口: ', data);
       });
+
+    fetch('/api/agent/recommend', {
+      method: 'POST',
+      body: JSON.stringify({
+        messages: [
+          {
+            role: 'user',
+            content: '帮我推荐一些高评分科幻电影',
+          },
+        ],
+      }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        console.log('recommend: ', data);
+      });
   };
 
   const handleSwitchMode = () => {

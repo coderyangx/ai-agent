@@ -114,21 +114,11 @@ export function MessageBubble(props: MessageBubbleProps) {
   };
 
   const getAvatar = () => {
-    if (isUser) {
-      return (
-        <Avatar>
-          <AvatarImage src='/user-avatar.png' alt='User' />
-          <AvatarFallback>
-            <User className='h-5 w-5' />
-          </AvatarFallback>
-        </Avatar>
-      );
-    }
     return (
       <Avatar>
-        <AvatarImage src='/bot-avatar.png' alt='AI Assistant' />
+        {/* <AvatarImage src='/user-avatar.png' alt='User' /> */}
         <AvatarFallback>
-          <Bot className='h-5 w-5' />
+          {isUser ? <User className='h-5 w-5' /> : <Bot className='h-5 w-5' />}
         </AvatarFallback>
       </Avatar>
     );

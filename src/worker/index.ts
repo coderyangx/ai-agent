@@ -1,3 +1,4 @@
+// eslint-disable
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 // import { createRequestHandler } from 'react-router';
@@ -7,6 +8,7 @@ import { z } from 'zod';
 // import { zValidator } from '@hono/zod-validator';
 import { streamText, generateText, generateObject } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
+import { responseError } from './utils';
 // import dotenv from 'dotenv';
 
 // dotenv.config();
@@ -59,26 +61,30 @@ app.post('/api/agent/test', async (c) => {
 });
 
 app.post('/api/agent/stream', async (c) => {
-  const { messages } = await c.req.json();
-  console.log('流式输出: ', messages);
-  const result = streamText({
-    model: getModel('gpt-4o-mini'),
-    messages: messages,
-    onChunk: (chunk) => {
-      // @ts-ignore
-      console.log('hono onChunk: ', chunk.chunk.textDelta);
-    },
-  });
-  // toDataStreamResponse can be used with the `useChat` and `useCompletion` hooks.
-  // return result.toDataStreamResponse({
-  //   sendReasoning: true,
-  // }); // 标准 sse 响应
-  return result.toTextStreamResponse(); // 纯文本流响应
-  // return honoStream(c, (s) => s.pipe(result.toDataStream()));
+  try {
+    const { messages } = await c.req.json();
+    // console.log('流式输出: ', messages);
+    const result = streamText({
+      model: getModel('gpt-4o-mini'),
+      messages: messages,
+      onChunk: (chunk) => {
+        // @ts-ignore
+        console.log('hono onChunk: ', chunk.chunk.textDelta);
+      },
+    });
+    // toDataStreamResponse can be used with the `useChat` and `useCompletion` hooks.
+    // return result.toDataStreamResponse({
+    //   sendReasoning: true,
+    // }); // 标准 sse 响应
+    return result.toTextStreamResponse(); // 纯文本流响应
+    // return honoStream(c, (s) => s.pipe(result.toDataStream()));
+  } catch (err) {
+    responseError(c, err, 'ai-stream 接口调用失败');
+  }
 });
 app.post('/api/agent/gemini-stream', async (c) => {
   const { messages } = await c.req.json();
-  console.log('流式输出: ', messages);
+  // console.log('流式输出: ', messages);
   const result = streamText({
     model: getModel('gpt-4o-mini'),
     messages: messages,
@@ -93,16 +99,21 @@ app.post('/api/agent/gemini-stream', async (c) => {
 });
 
 app.post('/api/agent/chat', async (c) => {
-  const { messages } = await c.req.json();
-  console.log('普通输出: ', messages);
-  const result = await generateText({
-    model: getModel('gpt-4o-mini'),
-    messages: messages,
-  });
-  // console.log('普通输出: ', result);
-  return c.json({
-    message: result.text,
-  });
+  try {
+    const { messages } = await c.req.json();
+    console.log('开始处理chat: ', messages);
+    const result = await generateText({
+      model: getModel('gpt-4o-mini'),
+      messages: messages,
+    });
+    console.log('chat 响应成功: ', result.text);
+    return c.json({
+      message: result.text,
+    });
+  } catch (err) {
+    console.error('chat 请求失败: ', err);
+    responseError(c, err, 'ai-chat 接口调用失败');
+  }
 });
 
 app.post('/api/agent/recommend', async (c) => {
