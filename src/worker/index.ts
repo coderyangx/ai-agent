@@ -8,6 +8,8 @@ import { z } from 'zod';
 // import { zValidator } from '@hono/zod-validator';
 import { streamText, generateText, generateObject } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
+import { google } from '@ai-sdk/google';
+// import { GoogleGenAI } from '@google/genai';
 import { responseError } from './utils';
 // import dotenv from 'dotenv';
 
@@ -21,6 +23,17 @@ const getModel = createOpenAI({
   apiKey: '21902918114338451458', //  process?.env?.FRIDAY_API_KEY ||
   baseURL: 'https://aigc.sankuai.com/v1/openai/native/',
 });
+// const getModel = createOpenAI({
+//   apiKey: 'AIzaSyDoUIEqZ3Ejo4XmPmc8XaBk8bW2BqDQxyc',
+//   baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+//   //'https://generativelanguage.googleapis.com/v1beta/models/',
+// });
+// const googleAI = google({
+//   apiKey: 'AIzaSyDoUIEqZ3Ejo4XmPmc8XaBk8bW2BqDQxyc',
+//   baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+// });
+
+// const ai = new GoogleGenAI({ apiKey: '960435062941' });
 
 // 配置CORS，允许所有来源访问
 app.use(
@@ -30,7 +43,12 @@ app.use(
 );
 
 // API 路由
-app.get('/api', (c) => {
+app.get('/api', async (c) => {
+  // const response = await ai.models.generateContent({
+  //   model: 'gemini-2.5-flash',
+  //   contents: '你是谁',
+  // });
+  // console.log(response.text);
   // console.log('c.env: ', c.env.FRIDAY_API_KEY, c.env);
   return c.json({
     code: 200,
@@ -65,7 +83,8 @@ app.post('/api/agent/stream', async (c) => {
     const { messages } = await c.req.json();
     // console.log('流式输出: ', messages);
     const result = streamText({
-      model: getModel('gpt-4o-mini'),
+      // model: getModel('gpt-4o-mini'),
+      model: getModel('gemini-2.5-flash'),
       messages: messages,
       onChunk: (chunk) => {
         // @ts-ignore
@@ -86,7 +105,8 @@ app.post('/api/agent/gemini-stream', async (c) => {
   const { messages } = await c.req.json();
   // console.log('流式输出: ', messages);
   const result = streamText({
-    model: getModel('gpt-4o-mini'),
+    // model: getModel('gpt-4o-mini'),
+    model: getModel('gemini-2.5-flash'),
     messages: messages,
     onChunk: (chunk) => {
       console.log('hono onChunk: ', chunk.chunk);
@@ -103,7 +123,8 @@ app.post('/api/agent/chat', async (c) => {
     const { messages } = await c.req.json();
     console.log('开始处理chat: ', messages);
     const result = await generateText({
-      model: getModel('gpt-4o-mini'),
+      // model: getModel('gpt-4o-mini'),
+      model: getModel('gemini-2.5-flash'),
       messages: messages,
     });
     console.log('chat 响应成功: ', result.text);
@@ -120,7 +141,8 @@ app.post('/api/agent/recommend', async (c) => {
   const { messages } = await c.req.json();
   console.log('推荐请求: ', messages);
   const result = await generateObject({
-    model: getModel('gpt-4o-mini'),
+    // model: getModel('gpt-4o-mini'),
+    model: getModel('gemini-2.5-flash'),
     system: `
     你是一个电影推荐系统，请严格按照以下规则处理用户请求：
     ## 规则

@@ -474,6 +474,7 @@ export default function ChatContainer() {
           {isLoading && !isStreamMode && (
             <MessageBubble content='' role='assistant' isLoading={true} />
           )}
+          <div ref={messagesEndRef} />
           {/* 错误提示 */}
           {/* {error && (
             <div className='bg-red-50 border border-red-200 rounded-lg p-3'>
