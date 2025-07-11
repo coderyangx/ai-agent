@@ -24,12 +24,12 @@ const getModel = createOpenAI({
   baseURL: 'https://aigc.sankuai.com/v1/openai/native/',
 });
 // const getModel = createOpenAI({
-//   apiKey: 'AIzaSyDoUIEqZ3Ejo4XmPmc8XaBk8bW2BqDQxyc',
+//   apiKey: '',
 //   baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/',
 //   //'https://generativelanguage.googleapis.com/v1beta/models/',
 // });
 // const googleAI = google({
-//   apiKey: 'AIzaSyDoUIEqZ3Ejo4XmPmc8XaBk8bW2BqDQxyc',
+//   apiKey: '',
 //   baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/',
 // });
 
