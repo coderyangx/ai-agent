@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Bot, Sun, Moon, Zap } from 'lucide-react';
+import { useScroll, motion } from 'motion/react';
 import { ScrollArea } from '../components/scroll-area';
 import SplitText from '../components/split-text';
 import { MessageBubble } from './message-bubble';
@@ -31,6 +32,8 @@ const cookie = getCookie();
 
 export default function ChatContainer() {
   const streamMode = JSON.parse(localStorage.getItem('isStreamMode')) || false;
+
+  const { scrollYProgress, scrollXProgress } = useScroll();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -395,7 +398,7 @@ export default function ChatContainer() {
   };
 
   return (
-    <div className='flex flex-col h-full max-w-4xl mx-auto bg-card rounded-lg shadow-lg overflow-hidden border'>
+    <div className='flex flex-col h-full max-w-4xl bg-card rounded-lg shadow-lg overflow-hidden border'>
       <div className='flex items-center justify-between px-6 py-4 border-b bg-card'>
         <div className='flex items-center space-x-2'>
           <Bot className='h-5 w-5 text-primary' onClick={handleBot} />
@@ -440,6 +443,19 @@ export default function ChatContainer() {
       </div>
 
       <ScrollArea className='flex-1 px-4' ref={scrollAreaRef}>
+        <motion.div
+          id='scroll-indicator'
+          style={{
+            scaleX: scrollYProgress,
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 10,
+            originX: 0,
+            backgroundColor: '#eee',
+          }}
+        />
         {/* <ContentCard /> */}
         <div className='space-y-6'>
           {messages.length === 0 ? (

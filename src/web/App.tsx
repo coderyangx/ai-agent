@@ -1,6 +1,7 @@
 // src/App.tsx
 
-import { useState } from 'react';
+import { use, useState } from 'react';
+import { useScroll, motion } from 'motion/react';
 import reactLogo from './assets/react.svg';
 import viteLogo from '/vite.svg';
 import cloudflareLogo from './assets/Cloudflare_Logo.svg';
