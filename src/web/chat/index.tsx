@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { Bot, Sun, Moon, Zap } from 'lucide-react';
+import { Bot, Sun, Moon, Zap, Loader, Loader2 } from 'lucide-react';
 import { useScroll, motion } from 'motion/react';
 import { ScrollArea } from '../components/scroll-area';
 import SplitText from '../components/split-text';
@@ -8,10 +8,9 @@ import { ChatInput } from './chat-input';
 import { Switch } from '../components/switch';
 import { Label } from '../components/label';
 import { Button } from '../components/button';
-
 import { useTheme } from '../utils/theme';
 import { getCookie } from '../config';
-import { set } from 'zod';
+import { toast, ToastContainer } from '../components/toast';
 // import { ContentCard } from '@/components/shadcn/ContentCard';
 
 interface Message {
@@ -39,6 +38,7 @@ export default function ChatContainer() {
   const [input, setInput] = useState('');
   const { theme, toggleTheme } = useTheme();
   const [isLoading, setIsLoading] = useState(false);
+  const [globalLoading, setGlobalLoading] = useState(false);
   const [isStreamMode, setIsStreamMode] = useState(streamMode);
   const [streamContent, setStreamContent] = useState('');
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -383,8 +383,36 @@ export default function ChatContainer() {
   };
 
   const handleSwitchMode = () => {
+    toast.success('切换成功!');
     setIsStreamMode(!isStreamMode);
     localStorage.setItem('isStreamMode', JSON.stringify(!isStreamMode));
+  };
+
+  const handleRecommend = async () => {
+    setGlobalLoading(true);
+    const recommends = await fetch('/api/agent/recommend', {
+      method: 'POST',
+      headers: { Cookie: cookie },
+      body: JSON.stringify({
+        messages: [{ role: 'user', content: '随机帮我推荐一些高评分科幻电影' }],
+      }),
+    });
+    const data = await recommends.json();
+    console.log('recommend: ', data);
+    // 处理推荐结果
+    const contents = data.movies
+      .map((m) => m.year + ' ' + m.title + ' ' + m.description + ' 评分: ' + m.rating)
+      .join('\n\n');
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: data.isValidRequest ? contents : data.message,
+        timestamp: new Date().toLocaleTimeString(),
+      },
+    ]);
+    setGlobalLoading(false);
   };
 
   const copyMessage = async (content: string) => {
@@ -399,6 +427,7 @@ export default function ChatContainer() {
 
   return (
     <div className='flex flex-col h-full max-w-4xl bg-card rounded-lg shadow-lg overflow-hidden border'>
+      <ToastContainer />
       <div className='flex items-center justify-between px-6 py-4 border-b bg-card'>
         <div className='flex items-center space-x-2'>
           <Bot className='h-5 w-5 text-primary' onClick={handleBot} />
@@ -422,6 +451,12 @@ export default function ChatContainer() {
         </div>
 
         <div className='flex items-center space-x-4'>
+          <div className='flex items-center space-x-2'>
+            <Button variant='ghost' onClick={handleRecommend} className='rounded-full'>
+              {globalLoading ? <Loader className='h-4 w-4 animate-spin' /> : ''}
+              推荐一下
+            </Button>
+          </div>
           {/* 流式输出模式开关 */}
           <div className='flex items-center space-x-2'>
             <Switch id='stream-mode' checked={isStreamMode} onCheckedChange={handleSwitchMode} />
