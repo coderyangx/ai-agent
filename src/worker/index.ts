@@ -6,11 +6,12 @@ import { cors } from 'hono/cors';
 // import { stream as honoStream } from 'hono/streaming';
 import { z } from 'zod';
 // import { zValidator } from '@hono/zod-validator';
-import { streamText, generateText, generateObject } from 'ai';
+import { streamText, generateText, generateObject, tool } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { google } from '@ai-sdk/google';
 // import { GoogleGenAI } from '@google/genai';
 import { responseError } from './utils';
+import { availableTools, executeWeatherTool } from './tools/weather-tool-config';
 // import dotenv from 'dotenv';
 
 // dotenv.config();
@@ -176,6 +177,87 @@ app.post('/api/agent/recommend', async (c) => {
     message: result.object.message,
     movies: result.object.movies || [],
   });
+});
+
+// 支持工具调用的聊天接口
+app.post('/api/agent/chat-with-tools', async (c) => {
+  try {
+    const { messages } = await c.req.json();
+    const systemMessage = {
+      role: 'system',
+      content: `你是一个智能AI助手，可以使用工具来帮助用户。
+可用工具：
+1. getWeather - 查询单个城市的当前天气情况
+2. getMultipleCitiesWeather - 同时查询多个城市的天气情况
+
+工具使用指南：
+- 当用户询问天气相关信息时，优先使用相应的天气工具
+- 对于单个城市天气查询，使用getWeather工具
+- 对于多个城市天气查询，使用getMultipleCitiesWeather工具
+- 如果用户的问题不涉及天气，则正常回答，不要使用工具
+- 工具调用后，基于工具返回的结果来回答用户的问题
+
+请根据用户的具体需求智能判断是否需要使用工具，以及使用哪个工具。`,
+    };
+    const messagesWithSystem = [systemMessage, ...messages];
+
+    const result = await generateText({
+      model: getModel('gemini-2.5-flash'),
+      messages: messagesWithSystem,
+      tools: {
+        getWeather: tool({
+          description: '查询单个城市的当前天气情况',
+          parameters: z.object({
+            city: z.string().describe('城市名称'),
+          }),
+          execute: async (args: { city: string }) => {
+            return await executeWeatherTool('getWeather', args);
+          },
+        }),
+        getMultipleCitiesWeather: tool({
+          description: '同时查询多个城市的天气情况',
+          parameters: z.object({
+            cities: z.string().describe('城市名称列表，用逗号分隔'),
+          }),
+          execute: async (args: { cities: string }) => {
+            return await executeWeatherTool('getMultipleCitiesWeather', args);
+          },
+        }),
+      },
+      maxSteps: 3, // 允许最多3步工具调用
+    });
+
+    console.log('工具调用响应: ', result);
+    if (result.toolCalls && result.toolCalls.length > 0) {
+      // 执行工具调用
+      const toolResults = [];
+      for (const toolCall of result.toolCalls) {
+        console.log('执行工具调用:', toolCall);
+        const toolResult = await executeWeatherTool(toolCall.toolName, toolCall.args);
+        toolResults.push({
+          toolCallId: toolCall.toolCallId,
+          toolName: toolCall.toolName,
+          result: toolResult,
+        });
+      }
+
+      return c.json({
+        message: result.text,
+        toolCalls: result.toolCalls,
+        toolResults: toolResults,
+        hasTools: true,
+      });
+    }
+    return c.json({
+      // message: result.text, // 纯文本
+      message: result.response.messages,
+      originResult: result,
+      hasTools: false,
+    });
+  } catch (err) {
+    console.error('工具调用聊天失败: ', err);
+    responseError(c, err, '工具调用聊天接口失败');
+  }
 });
 
 // 暴露client端

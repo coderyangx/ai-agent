@@ -9,7 +9,7 @@ import { Switch } from '../components/switch';
 import { Label } from '../components/label';
 import { Button } from '../components/button';
 import { useTheme } from '../utils/theme';
-import { getCookie } from '../config';
+import { getCookie, getHeader } from '../config';
 import { toast, ToastContainer } from '../components/toast';
 // import { ContentCard } from '@/components/shadcn/ContentCard';
 
@@ -18,16 +18,17 @@ interface Message {
   content: string;
   role: 'user' | 'assistant' | 'system' | 'tool';
   timestamp: string;
+  parts?: Array<{
+    type: 'text' | 'tool-invocation' | 'tool-call' | 'tool-result';
+    text?: string;
+    toolInvocation?: any;
+    toolCallId?: string;
+    toolName?: string;
+    args?: any;
+    result?: any;
+    state?: 'calling' | 'finished' | 'failed' | 'success';
+  }>;
 }
-
-interface Message {
-  id: string;
-  content: string;
-  role: 'user' | 'assistant' | 'system' | 'tool';
-  timestamp: string;
-}
-
-const cookie = getCookie();
 
 export default function ChatContainer() {
   const streamMode = JSON.parse(localStorage.getItem('isStreamMode')) || false;
@@ -35,7 +36,7 @@ export default function ChatContainer() {
   const { scrollYProgress, scrollXProgress } = useScroll();
 
   const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState('上海天气怎么样');
   const { theme, toggleTheme } = useTheme();
   const [isLoading, setIsLoading] = useState(false);
   const [globalLoading, setGlobalLoading] = useState(false);
@@ -101,7 +102,9 @@ export default function ChatContainer() {
       await handleStreamMode(userMessage.content);
     } else {
       // 普通模式
-      await handleNormalMode(userMessage.content);
+      // await handleNormalMode(userMessage.content);
+      // 使用工具调用模式
+      await handleToolsMode(userMessage.content);
     }
   };
 
@@ -123,12 +126,7 @@ export default function ChatContainer() {
       // 调用AI /api/agent/chat
       const response = await fetch('/api/agent/chat', {
         method: 'POST',
-        headers: {
-          'X-Time': new Date().toLocaleString(),
-          'X-Timestamp': new Date().getTime().toString(),
-          'Custom-Name': 'yang',
-          Cookie: cookie,
-        },
+        headers: getHeader(),
         body: JSON.stringify({ messages: conversation }),
       });
 
@@ -147,6 +145,59 @@ export default function ChatContainer() {
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         content: '抱歉，发生了一些错误。请稍后再试。',
+        role: 'system',
+        timestamp: new Date().toLocaleTimeString(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 处理工具调用输出
+  const handleToolsMode = async (content: string) => {
+    try {
+      const conversation = [
+        ...messages.map((msg) => ({
+          role: msg.role,
+          content: msg.content,
+        })),
+        {
+          role: 'user' as const,
+          content: content,
+        },
+      ];
+      const response = await fetch('/api/agent/chat-with-tools', {
+        method: 'POST',
+        headers: getHeader(),
+        body: JSON.stringify({ messages: conversation }),
+      });
+
+      const data = await response.json();
+
+      // 处理新的消息结构
+      if (data.message && Array.isArray(data.message)) {
+        // 遍历所有消息，包括assistant和tool角色的消息
+        let parts = [];
+        for (const msg of data.message) {
+          console.log('遍历所有消', msg, data.message);
+          parts = parts.concat(msg.content || []);
+        }
+        setMessages((prev) => [...prev, { ...data.message, parts }]);
+      } else if (data.message) {
+        const assistantMessage: Message = {
+          id: (Date.now() + Math.random()).toString(),
+          content: data.message,
+          role: 'assistant',
+          timestamp: new Date().toLocaleTimeString(),
+        };
+        setMessages((prev) => [...prev, assistantMessage]);
+      }
+    } catch (error) {
+      console.error('工具调用错误:', error);
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: '工具调用服务暂时不可用，请稍后再试。',
         role: 'system',
         timestamp: new Date().toLocaleTimeString(),
       };
@@ -263,6 +314,7 @@ export default function ChatContainer() {
 
   // 修改 handleStreamMode 中的处理逻辑
   // 处理流式输出
+
   const handleStreamMode = async (content: string) => {
     try {
       // 创建一个空的助手消息占位
@@ -295,12 +347,7 @@ export default function ChatContainer() {
       // 调用流式API
       const response = await fetch('/api/agent/stream', {
         method: 'POST',
-        headers: {
-          'X-Time': new Date().toLocaleString(),
-          'X-Timestamp': new Date().getTime().toString(),
-          'Custom-Name': 'yang',
-          Cookie: cookie,
-        },
+        headers: getHeader(),
         body: JSON.stringify({ messages: conversation }),
       });
 
@@ -355,7 +402,7 @@ export default function ChatContainer() {
     }
   };
 
-  const handleBot = () => {
+  const handleClickBot = () => {
     fetch('/api')
       .then((res) => res.json())
       .then((data) => {
@@ -364,9 +411,7 @@ export default function ChatContainer() {
 
     fetch('/api/agent/recommend', {
       method: 'POST',
-      headers: {
-        Cookie: cookie,
-      },
+      headers: getHeader(),
       body: JSON.stringify({
         messages: [
           {
@@ -392,7 +437,7 @@ export default function ChatContainer() {
     setGlobalLoading(true);
     const recommends = await fetch('/api/agent/recommend', {
       method: 'POST',
-      headers: { Cookie: cookie },
+      headers: getHeader(),
       body: JSON.stringify({
         messages: [{ role: 'user', content: '随机帮我推荐一些高评分科幻电影' }],
       }),
@@ -426,11 +471,11 @@ export default function ChatContainer() {
   };
 
   return (
-    <div className='flex flex-col h-full max-w-4xl bg-card rounded-lg shadow-lg overflow-hidden border'>
+    <div className='chat-container w-full flex flex-col h-full max-w-4xl bg-card rounded-lg shadow-lg overflow-hidden border'>
       <ToastContainer />
       <div className='flex items-center justify-between px-6 py-4 border-b bg-card'>
         <div className='flex items-center space-x-2'>
-          <Bot className='h-5 w-5 text-primary' onClick={handleBot} />
+          <Bot className='h-5 w-5 text-primary cursor-pointer' onClick={handleClickBot} />
           <SplitText
             text='Agent'
             className='font-semibold text-center'
@@ -510,16 +555,11 @@ export default function ChatContainer() {
                 role={message.role}
                 timestamp={message.timestamp}
                 id={message.id}
+                parts={message.parts}
                 onCopy={copyMessage}
                 onLike={(id) => console.log('点赞:', id)}
                 onDislike={(id) => console.log('踩:', id)}
               />
-              // <MessageBubble
-              //   key={message.id}
-              //   content={message.content}
-              //   role={message.role}
-              //   timestamp={message.timestamp}
-              // />
             ))
           )}
           {isLoading && !isStreamMode && (
