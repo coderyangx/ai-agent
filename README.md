@@ -1,3 +1,6 @@
+# 本仓库已废弃，前端服务迁移至 [opencode-app](https://github.com/coderyangx/opencode-app) 静态部署cf，后端服务迁移至 [hono-cf-worker](https://github.com/coderyangx/hono-cf-worker) 单独部署 worker
+> [cloudflare 地址](https://dash.cloudflare.com/1d20d052e6f6ade5c6e79d3bd53657e5/aicoder.dpdns.org/workers)
+
 # React + Vite + Hono + Cloudflare Workers
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/templates/tree/main/vite-react-template)
